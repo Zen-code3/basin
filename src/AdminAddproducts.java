@@ -64,10 +64,12 @@ public class AdminAddproducts extends javax.swing.JFrame {
             return;
         }
 
-        java.sql.Date expirySql = null;
+        String expiryToStore = null;
         if (expiryRaw != null && !expiryRaw.isEmpty()) {
             try {
-                expirySql = java.sql.Date.valueOf(expiryRaw);
+                // Validate format; store as plain text YYYY-MM-DD (column is TEXT in SQLite).
+                java.sql.Date.valueOf(expiryRaw);
+                expiryToStore = expiryRaw;
             } catch (IllegalArgumentException e) {
                 javax.swing.JOptionPane.showMessageDialog(this, "Expiry must be YYYY-MM-DD.", "Validation",
                         javax.swing.JOptionPane.WARNING_MESSAGE);
@@ -83,10 +85,10 @@ public class AdminAddproducts extends javax.swing.JFrame {
             ps.setString(3, category);
             ps.setDouble(4, price);
             ps.setInt(5, stock);
-            if (expirySql != null) {
-                ps.setDate(6, expirySql);
+            if (expiryToStore != null) {
+                ps.setString(6, expiryToStore);
             } else {
-                ps.setNull(6, java.sql.Types.DATE);
+                ps.setNull(6, java.sql.Types.VARCHAR);
             }
             ps.executeUpdate();
             javax.swing.JOptionPane.showMessageDialog(this, "Product has been successly created.",

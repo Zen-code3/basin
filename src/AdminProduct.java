@@ -43,8 +43,13 @@ public class AdminProduct extends javax.swing.JFrame {
             ps.setString(2, term);
             try (java.sql.ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
-                    java.sql.Date exp = rs.getDate("expirydate");
-                    String expStr = exp != null ? exp.toString() : "";
+                    String expStr = "";
+                    String expRaw = rs.getString("expirydate");
+                    if (expRaw != null) {
+                        expRaw = expRaw.trim();
+                        // Accept either "YYYY-MM-DD" or full timestamps; just display as-is.
+                        expStr = expRaw;
+                    }
                     double price = rs.getDouble("price");
                     String priceStr = "₱" + String.format(java.util.Locale.US, "%.2f", price);
                     productTableModel.addRow(new Object[]{

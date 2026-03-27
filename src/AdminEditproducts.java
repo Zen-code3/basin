@@ -47,8 +47,8 @@ public class AdminEditproducts extends javax.swing.JFrame {
                 jTextField5.setText(rs.getString("category"));
                 jTextField6.setText(String.valueOf(rs.getDouble("price")));
                 jTextField4.setText(String.valueOf(rs.getInt("stock_quantity")));
-                java.sql.Date exp = rs.getDate("expirydate");
-                jTextField2.setText(exp != null ? exp.toString() : "");
+                String expRaw = rs.getString("expirydate");
+                jTextField2.setText(expRaw != null ? expRaw.trim() : "");
             }
         } catch (java.sql.SQLException e) {
             javax.swing.JOptionPane.showMessageDialog(this, DBConnection.userMessage(e), "Database error",

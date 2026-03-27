@@ -52,10 +52,17 @@ public class Cart extends javax.swing.JFrame {
 
         totalLabel = new javax.swing.JLabel("Total: ₱0.00");
 
+        javax.swing.JButton backButton = new javax.swing.JButton("Back");
+        javax.swing.JButton checkoutButton = new javax.swing.JButton("Checkout (Save Order)");
         javax.swing.JButton printButton = new javax.swing.JButton("Print Receipt");
         javax.swing.JButton downloadButton = new javax.swing.JButton("Download Receipt");
         javax.swing.JButton clearButton = new javax.swing.JButton("Clear Cart");
 
+        backButton.addActionListener(e -> {
+            new medicine().setVisible(true);
+            dispose();
+        });
+        checkoutButton.addActionListener(e -> onCheckout());
         printButton.addActionListener(e -> onPrint());
         downloadButton.addActionListener(e -> onDownload());
         clearButton.addActionListener(e -> onClear());
@@ -63,7 +70,9 @@ public class Cart extends javax.swing.JFrame {
         javax.swing.JPanel bottomPanel = new javax.swing.JPanel();
         bottomPanel.setLayout(new java.awt.FlowLayout(java.awt.FlowLayout.RIGHT));
         bottomPanel.add(totalLabel);
+        bottomPanel.add(backButton);
         bottomPanel.add(clearButton);
+        bottomPanel.add(checkoutButton);
         bottomPanel.add(printButton);
         bottomPanel.add(downloadButton);
 
@@ -147,6 +156,32 @@ public class Cart extends javax.swing.JFrame {
     private void onClear() {
         CartStorage.clear();
         reloadTable();
+    }
+
+    private void onCheckout() {
+        java.util.List<CartStorage.Item> items = CartStorage.getItems();
+        if (items.isEmpty()) {
+            javax.swing.JOptionPane.showMessageDialog(this, "Cart is empty.", "Checkout",
+                    javax.swing.JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        Integer customerId = CustomerSession.getCurrentCustomerId();
+        if (customerId == null) {
+            javax.swing.JOptionPane.showMessageDialog(this, "Please login again.", "Checkout",
+                    javax.swing.JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        try {
+            int orderId = OrdersRepository.createOrderFromCart(customerId, items, CartStorage.getTotal());
+            CartStorage.clear();
+            reloadTable();
+            javax.swing.JOptionPane.showMessageDialog(this, "Order saved. Order No: " + orderId,
+                    "Checkout", javax.swing.JOptionPane.INFORMATION_MESSAGE);
+            new Orders().setVisible(true);
+        } catch (java.sql.SQLException ex) {
+            javax.swing.JOptionPane.showMessageDialog(this, DBConnection.userMessage(ex), "Database error",
+                    javax.swing.JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     public static void main(String[] args) {

@@ -69,6 +69,7 @@ public class logIn extends javax.swing.JFrame {
                 if ("admin".equalsIgnoreCase(role)) {
                     new AdminDashboard().setVisible(true);
                 } else {
+                    Customers.CustomerSession.setUser(id, email, name, role);
                     new UserDashboard().setVisible(true);
                 }
                 dispose();

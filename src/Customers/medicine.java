@@ -184,15 +184,19 @@ public class medicine extends javax.swing.JFrame {
         javax.swing.JScrollPane scrollPane = new javax.swing.JScrollPane(productTable);
 
         javax.swing.JPanel topPanel = new javax.swing.JPanel();
+        javax.swing.JButton backButton = new javax.swing.JButton("Back");
         javax.swing.JButton addToCartButton = new javax.swing.JButton("Add to Cart");
+        javax.swing.JButton myOrdersButton = new javax.swing.JButton("My Orders");
 
         topPanel.setLayout(new java.awt.FlowLayout(java.awt.FlowLayout.LEFT));
+        topPanel.add(backButton);
         topPanel.add(new javax.swing.JLabel("Search:"));
         searchField.setColumns(20);
         topPanel.add(searchField);
         topPanel.add(new javax.swing.JLabel("Category:"));
         topPanel.add(categoryFilter);
         topPanel.add(addToCartButton);
+        topPanel.add(myOrdersButton);
 
         jPanel1.removeAll();
         jPanel1.setLayout(new java.awt.BorderLayout(5, 5));
@@ -215,6 +219,11 @@ public class medicine extends javax.swing.JFrame {
 
         categoryFilter.addActionListener(e -> reloadProducts());
         addToCartButton.addActionListener(e -> onAddToCart());
+        backButton.addActionListener(e -> {
+            new UserDashboard().setVisible(true);
+            dispose();
+        });
+        myOrdersButton.addActionListener(e -> new Orders().setVisible(true));
 
         if (initialCategory != null && !initialCategory.trim().isEmpty()) {
             categoryFilter.setSelectedItem(initialCategory);
