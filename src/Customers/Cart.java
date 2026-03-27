@@ -172,10 +172,18 @@ public class Cart extends javax.swing.JFrame {
             return;
         }
         try {
-            int orderId = OrdersRepository.createOrderFromCart(customerId, items, CartStorage.getTotal());
+            int orderId;
+            if (OrdersRepository.hasPendingOrder(customerId)) {
+                orderId = -1;
+            } else {
+                orderId = OrdersRepository.createOrderFromCart(customerId, items, CartStorage.getTotal());
+            }
             CartStorage.clear();
             reloadTable();
-            javax.swing.JOptionPane.showMessageDialog(this, "Order saved. Order No: " + orderId,
+            String msg = orderId > 0
+                    ? "Order saved. Order No: " + orderId
+                    : "Items are already saved to your pending order in My Orders.";
+            javax.swing.JOptionPane.showMessageDialog(this, msg,
                     "Checkout", javax.swing.JOptionPane.INFORMATION_MESSAGE);
             new Orders().setVisible(true);
         } catch (java.sql.SQLException ex) {

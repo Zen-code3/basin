@@ -338,8 +338,18 @@ public class medicine extends javax.swing.JFrame {
         }
 
         CartStorage.addItem(productId, name, price, qty);
+        Integer customerId = CustomerSession.getCurrentCustomerId();
+        if (customerId != null) {
+            try {
+                OrdersRepository.addItemToPendingOrder(customerId, productId, qty, price);
+            } catch (java.sql.SQLException ex) {
+                javax.swing.JOptionPane.showMessageDialog(this, DBConnection.userMessage(ex),
+                        "Database error", javax.swing.JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+        }
         javax.swing.JOptionPane.showMessageDialog(this,
-                "Added to cart.", "Add to Cart",
+                "Added to cart. You can now see it in My Orders.", "Add to Cart",
                 javax.swing.JOptionPane.INFORMATION_MESSAGE);
     }
 

@@ -48,6 +48,27 @@ final class OrdersRepository {
     private OrdersRepository() {
     }
 
+    static void addItemToPendingOrder(int customerId, int productId, int quantity, double unitPrice) throws SQLException {
+        try (Connection c = DBConnection.getConnection()) {
+            boolean oldAuto = c.getAutoCommit();
+            c.setAutoCommit(false);
+            try {
+                int orderId = findPendingOrderId(c, customerId);
+                if (orderId <= 0) {
+                    orderId = createPendingOrder(c, customerId);
+                }
+                upsertOrderItem(c, orderId, productId, quantity, unitPrice);
+                recomputeOrderTotal(c, orderId);
+                c.commit();
+            } catch (SQLException ex) {
+                c.rollback();
+                throw ex;
+            } finally {
+                c.setAutoCommit(oldAuto);
+            }
+        }
+    }
+
     static int createOrderFromCart(int customerId, List<CartStorage.Item> items, double total) throws SQLException {
         String insertOrder = "INSERT INTO \"order\" (customer_id, total_amount, status) VALUES (?, ?, 'pending')";
         String insertItem = "INSERT INTO order_item (order_id, product_id, quantity, subtotal) VALUES (?, ?, ?, ?)";
@@ -109,6 +130,17 @@ final class OrdersRepository {
             }
         }
         return out;
+    }
+
+    static boolean hasPendingOrder(int customerId) throws SQLException {
+        String sql = "SELECT 1 FROM \"order\" WHERE customer_id = ? AND lower(status) = 'pending' LIMIT 1";
+        try (Connection c = DBConnection.getConnection();
+                PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setInt(1, customerId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        }
     }
 
     static OrderRow getOrder(int orderId) throws SQLException {
@@ -182,6 +214,87 @@ final class OrdersRepository {
         sb.append("\nTotal: ₱").append(String.format("%.2f", o.totalAmount)).append("\n");
         sb.append("Thank you for your purchase!");
         return sb.toString();
+    }
+
+    private static int findPendingOrderId(Connection c, int customerId) throws SQLException {
+        String sql = "SELECT order_id FROM \"order\" WHERE customer_id = ? AND lower(status) = 'pending' ORDER BY order_id DESC LIMIT 1";
+        try (PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setInt(1, customerId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt("order_id");
+                }
+                return -1;
+            }
+        }
+    }
+
+    private static int createPendingOrder(Connection c, int customerId) throws SQLException {
+        String sql = "INSERT INTO \"order\" (customer_id, total_amount, status) VALUES (?, 0, 'pending')";
+        try (PreparedStatement ps = c.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+            ps.setInt(1, customerId);
+            ps.executeUpdate();
+            try (ResultSet keys = ps.getGeneratedKeys()) {
+                if (keys.next()) {
+                    return keys.getInt(1);
+                }
+            }
+        }
+        throw new SQLException("Could not create pending order.");
+    }
+
+    private static void upsertOrderItem(Connection c, int orderId, int productId, int quantity, double unitPrice) throws SQLException {
+        String selectSql = "SELECT order_item_id, quantity, subtotal FROM order_item WHERE order_id = ? AND product_id = ?";
+        try (PreparedStatement ps = c.prepareStatement(selectSql)) {
+            ps.setInt(1, orderId);
+            ps.setInt(2, productId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    int orderItemId = rs.getInt("order_item_id");
+                    int oldQty = rs.getInt("quantity");
+                    double oldSubtotal = rs.getDouble("subtotal");
+                    int newQty = oldQty + quantity;
+                    double newSubtotal = oldSubtotal + (unitPrice * quantity);
+
+                    String updateSql = "UPDATE order_item SET quantity = ?, subtotal = ? WHERE order_item_id = ?";
+                    try (PreparedStatement ups = c.prepareStatement(updateSql)) {
+                        ups.setInt(1, newQty);
+                        ups.setDouble(2, newSubtotal);
+                        ups.setInt(3, orderItemId);
+                        ups.executeUpdate();
+                    }
+                    return;
+                }
+            }
+        }
+
+        String insertSql = "INSERT INTO order_item (order_id, product_id, quantity, subtotal) VALUES (?, ?, ?, ?)";
+        try (PreparedStatement ps = c.prepareStatement(insertSql)) {
+            ps.setInt(1, orderId);
+            ps.setInt(2, productId);
+            ps.setInt(3, quantity);
+            ps.setDouble(4, unitPrice * quantity);
+            ps.executeUpdate();
+        }
+    }
+
+    private static void recomputeOrderTotal(Connection c, int orderId) throws SQLException {
+        double total = 0;
+        String sumSql = "SELECT IFNULL(SUM(subtotal), 0) AS total FROM order_item WHERE order_id = ?";
+        try (PreparedStatement ps = c.prepareStatement(sumSql)) {
+            ps.setInt(1, orderId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    total = rs.getDouble("total");
+                }
+            }
+        }
+        String updateSql = "UPDATE \"order\" SET total_amount = ? WHERE order_id = ?";
+        try (PreparedStatement ps = c.prepareStatement(updateSql)) {
+            ps.setDouble(1, total);
+            ps.setInt(2, orderId);
+            ps.executeUpdate();
+        }
     }
 }
 

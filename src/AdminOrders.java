@@ -126,7 +126,7 @@ public class AdminOrders extends javax.swing.JFrame {
                 print.addActionListener(ae -> printReceipt(orderId));
                 menu.add(print);
                 menu.addSeparator();
-                String[] statuses = new String[]{"completed", "pending", "processing", "cancelled"};
+                String[] statuses = new String[]{"pending", "approved", "completed", "cancelled"};
                 for (String st : statuses) {
                     javax.swing.JMenuItem mi = new javax.swing.JMenuItem("Set status: " + st);
                     final String s = st;
