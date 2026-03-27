@@ -11,11 +11,20 @@ package Customers;
  */
 public class medicine extends javax.swing.JFrame {
 
+    private javax.swing.JTextField searchField;
+    private javax.swing.JComboBox<String> categoryFilter;
+    private javax.swing.JTable productTable;
+
     /**
      * Creates new form medicine
      */
     public medicine() {
+        this("All");
+    }
+
+    public medicine(String initialCategory) {
         initComponents();
+        initCustomComponents(initialCategory);
     }
 
     /**
@@ -51,7 +60,7 @@ public class medicine extends javax.swing.JFrame {
         jLabel15.setIcon(new javax.swing.ImageIcon(getClass().getResource("/images/13x13.png"))); // NOI18N
 
         jLabel9.setFont(new java.awt.Font("Tahoma", 1, 14)); // NOI18N
-        jLabel9.setText("Orders");
+        jLabel9.setText("Cart");
 
         javax.swing.GroupLayout jPanel8Layout = new javax.swing.GroupLayout(jPanel8);
         jPanel8.setLayout(jPanel8Layout);
@@ -85,11 +94,11 @@ public class medicine extends javax.swing.JFrame {
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
 
-        jPanel1.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
+        jPanel1.setLayout(new java.awt.BorderLayout());
 
         jLabel3.setIcon(new javax.swing.ImageIcon(getClass().getResource("/images/329898072_221017770317936_8620322678039306708_n.jpg"))); // NOI18N
         jLabel3.setText("jLabel3");
-        jPanel1.add(jLabel3, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 0, 990, 540));
+        jPanel1.add(jLabel3, java.awt.BorderLayout.CENTER);
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
@@ -145,6 +154,184 @@ public class medicine extends javax.swing.JFrame {
                 new medicine().setVisible(true);
             }
         });
+    }
+
+    private void initCustomComponents(String initialCategory) {
+        WindowHelper.sizeAndCenter(this);
+
+        searchField = new javax.swing.JTextField();
+        categoryFilter = new javax.swing.JComboBox<>(new String[]{
+            "All",
+            "Medicine",
+            "Medical Supplies",
+            "Milks",
+            "Mom & Baby",
+            "Beauty Products"
+        });
+
+        productTable = new javax.swing.JTable();
+        productTable.setModel(new javax.swing.table.DefaultTableModel(
+                new Object[][]{},
+                new String[]{
+                    "ID", "Name", "Category", "Price"
+                }
+        ) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+        });
+        javax.swing.JScrollPane scrollPane = new javax.swing.JScrollPane(productTable);
+
+        javax.swing.JPanel topPanel = new javax.swing.JPanel();
+        javax.swing.JButton addToCartButton = new javax.swing.JButton("Add to Cart");
+
+        topPanel.setLayout(new java.awt.FlowLayout(java.awt.FlowLayout.LEFT));
+        topPanel.add(new javax.swing.JLabel("Search:"));
+        searchField.setColumns(20);
+        topPanel.add(searchField);
+        topPanel.add(new javax.swing.JLabel("Category:"));
+        topPanel.add(categoryFilter);
+        topPanel.add(addToCartButton);
+
+        jPanel1.removeAll();
+        jPanel1.setLayout(new java.awt.BorderLayout(5, 5));
+        jPanel1.add(topPanel, java.awt.BorderLayout.NORTH);
+        jPanel1.add(scrollPane, java.awt.BorderLayout.CENTER);
+
+        jLabel9.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+        jLabel9.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                new Cart().setVisible(true);
+            }
+        });
+
+        searchField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+            @Override public void insertUpdate(javax.swing.event.DocumentEvent e) { reloadProducts(); }
+            @Override public void removeUpdate(javax.swing.event.DocumentEvent e) { reloadProducts(); }
+            @Override public void changedUpdate(javax.swing.event.DocumentEvent e) { reloadProducts(); }
+        });
+
+        categoryFilter.addActionListener(e -> reloadProducts());
+        addToCartButton.addActionListener(e -> onAddToCart());
+
+        if (initialCategory != null && !initialCategory.trim().isEmpty()) {
+            categoryFilter.setSelectedItem(initialCategory);
+        }
+
+        reloadProducts();
+        revalidate();
+        repaint();
+    }
+
+    private void reloadProducts() {
+        String search = searchField.getText() != null ? searchField.getText().trim() : "";
+        String category = (String) categoryFilter.getSelectedItem();
+        if (category == null) {
+            category = "All";
+        }
+
+        StringBuilder sql = new StringBuilder(
+                "SELECT product_id, product_name, category, price FROM product WHERE 1=1");
+
+        java.util.List<Object> params = new java.util.ArrayList<>();
+
+        if (!"All".equalsIgnoreCase(category)) {
+            // Be tolerant: admin might type categories with slightly different wording/case/spaces.
+            String cat = category.toLowerCase();
+            if (cat.contains("medic") && !cat.contains("suppl")) {
+                sql.append(" AND lower(ifnull(category,'')) LIKE ?");
+                params.add("%medic%");
+            } else if (cat.contains("suppl")) {
+                sql.append(" AND lower(ifnull(category,'')) LIKE ?");
+                params.add("%suppl%");
+            } else if (cat.contains("milk")) {
+                sql.append(" AND lower(ifnull(category,'')) LIKE ?");
+                params.add("%milk%");
+            } else if (cat.contains("mom") || cat.contains("baby")) {
+                sql.append(" AND (lower(ifnull(category,'')) LIKE ? OR lower(ifnull(category,'')) LIKE ?)");
+                params.add("%mom%");
+                params.add("%baby%");
+            } else if (cat.contains("beaut")) {
+                sql.append(" AND lower(ifnull(category,'')) LIKE ?");
+                params.add("%beaut%");
+            } else {
+                sql.append(" AND lower(ifnull(category,'')) LIKE ?");
+                params.add("%" + cat + "%");
+            }
+        }
+
+        if (!search.isEmpty()) {
+            sql.append(" AND (product_name LIKE ? OR description LIKE ?)");
+            String like = "%" + search + "%";
+            params.add(like);
+            params.add(like);
+        }
+
+        javax.swing.table.DefaultTableModel model = (javax.swing.table.DefaultTableModel) productTable.getModel();
+        model.setRowCount(0);
+
+        try (java.sql.Connection c = DBConnection.getConnection();
+                java.sql.PreparedStatement ps = c.prepareStatement(sql.toString())) {
+            for (int i = 0; i < params.size(); i++) {
+                ps.setObject(i + 1, params.get(i));
+            }
+            try (java.sql.ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    Object[] row = new Object[]{
+                        rs.getInt("product_id"),
+                        rs.getString("product_name"),
+                        rs.getString("category"),
+                        rs.getDouble("price")
+                    };
+                    model.addRow(row);
+                }
+            }
+        } catch (java.sql.SQLException ex) {
+            javax.swing.JOptionPane.showMessageDialog(this, DBConnection.userMessage(ex),
+                    "Database error", javax.swing.JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void onAddToCart() {
+        int row = productTable.getSelectedRow();
+        if (row < 0) {
+            javax.swing.JOptionPane.showMessageDialog(this,
+                    "Select a product first.", "Add to Cart",
+                    javax.swing.JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        javax.swing.table.TableModel model = productTable.getModel();
+        int productId = (int) model.getValueAt(row, 0);
+        String name = String.valueOf(model.getValueAt(row, 1));
+        double price = ((Number) model.getValueAt(row, 3)).doubleValue();
+
+        String qtyRaw = javax.swing.JOptionPane.showInputDialog(this,
+                "Enter quantity:", "Add to Cart", javax.swing.JOptionPane.QUESTION_MESSAGE);
+        if (qtyRaw == null) {
+            return;
+        }
+        int qty;
+        try {
+            qty = Integer.parseInt(qtyRaw.trim());
+        } catch (NumberFormatException e) {
+            javax.swing.JOptionPane.showMessageDialog(this,
+                    "Enter a valid quantity.", "Add to Cart",
+                    javax.swing.JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        if (qty <= 0) {
+            javax.swing.JOptionPane.showMessageDialog(this,
+                    "Quantity must be greater than zero.", "Add to Cart",
+                    javax.swing.JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        CartStorage.addItem(productId, name, price, qty);
+        javax.swing.JOptionPane.showMessageDialog(this,
+                "Added to cart.", "Add to Cart",
+                javax.swing.JOptionPane.INFORMATION_MESSAGE);
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables

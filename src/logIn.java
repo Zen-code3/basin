@@ -4,6 +4,8 @@
  * and open the template in the editor.
  */
 
+import Customers.UserDashboard;
+
 /**
  *
  * @author ilove
@@ -64,7 +66,11 @@ public class logIn extends javax.swing.JFrame {
                     role = "customer";
                 }
                 SessionManager.setUser(id, email, name, role);
-                new AdminDashboard().setVisible(true);
+                if ("admin".equalsIgnoreCase(role)) {
+                    new AdminDashboard().setVisible(true);
+                } else {
+                    new UserDashboard().setVisible(true);
+                }
                 dispose();
             }
         } catch (java.sql.SQLException ex) {

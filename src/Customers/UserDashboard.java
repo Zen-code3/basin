@@ -16,6 +16,7 @@ public class UserDashboard extends javax.swing.JFrame {
      */
     public UserDashboard() {
         initComponents();
+        setupNavigation();
     }
 
     /**
@@ -172,6 +173,51 @@ public class UserDashboard extends javax.swing.JFrame {
                 new UserDashboard().setVisible(true);
             }
         });
+    }
+
+    private void setupNavigation() {
+        java.awt.Cursor hand = new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR);
+        jLabel3.setCursor(hand);
+        jLabel4.setCursor(hand);
+        jLabel5.setCursor(hand);
+        jLabel6.setCursor(hand);
+        jLabel7.setCursor(hand);
+
+        jLabel3.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                openMedicineWithCategory("Medicine");
+            }
+        });
+        jLabel5.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                openMedicineWithCategory("Medical Supplies");
+            }
+        });
+        jLabel4.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                openMedicineWithCategory("Milks");
+            }
+        });
+        jLabel7.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                openMedicineWithCategory("Mom & Baby");
+            }
+        });
+        jLabel6.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                openMedicineWithCategory("Beauty Products");
+            }
+        });
+    }
+
+    private void openMedicineWithCategory(String category) {
+        new medicine(category).setVisible(true);
+        dispose();
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
