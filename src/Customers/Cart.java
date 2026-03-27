@@ -3,6 +3,7 @@ package Customers;
 /**
  * Simple cart view for customers.
  */
+
 public class Cart extends javax.swing.JFrame {
 
     private javax.swing.JTable cartTable;
